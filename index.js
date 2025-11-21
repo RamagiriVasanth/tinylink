@@ -17,7 +17,7 @@ const pool = new Pool({
 app.use(cors());
 app.use(bodyParser.json());
 
-// Serve static frontend files first
+// Serve static frontend files
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Health check
@@ -39,7 +39,7 @@ app.get('/code/:code', (req, res) => {
 const linkRoutes = require('./routes/links')(pool);
 app.use('/api/links', linkRoutes);
 
-// Redirect route (must be after /code/:code)
+// Redirect route (after /code/:code)
 app.get('/:code', async (req, res) => {
   const { code } = req.params;
   try {
