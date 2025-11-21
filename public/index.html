@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TinyLink Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold mb-4">TinyLink Dashboard</h1>
+
+    <!-- Add Link Form -->
+    <form id="addLinkForm" class="mb-6 flex gap-2 flex-wrap">
+      <input type="url" id="url" placeholder="Enter URL" required
+             class="border p-2 flex-1 rounded" pattern="https?://.+">
+      <input type="text" id="code" placeholder="Custom code (optional)"
+             class="border p-2 rounded w-40">
+      <button type="submit" class="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 transition">Add</button>
+    </form>
+
+    <!-- Links Table -->
+    <table class="w-full table-auto border-collapse border border-gray-300">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="border px-2 py-1">Code</th>
+          <th class="border px-2 py-1">URL</th>
+          <th class="border px-2 py-1">Clicks</th>
+          <th class="border px-2 py-1">Last Clicked</th>
+          <th class="border px-2 py-1">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="linksTable">
+        <tr><td colspan="5" class="text-center text-gray-500 py-2">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const API = '/api/links';
+    const table = document.getElementById('linksTable');
+    const form = document.getElementById('addLinkForm');
+
+    // URL validation function
+    function isValidURL(string) {
+      try { new URL(string); return true; } 
+      catch { return false; }
+    }
+
+    // Fetch and display all links
+    async function loadLinks() {
+      table.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-2">Loading...</td></tr>';
+      try {
+        const res = await fetch(API);
+        const links = await res.json();
+        if (links.length === 0) {
+          table.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-2">No links yet</td></tr>';
+          return;
+        }
+
+        table.innerHTML = '';
+        links.forEach(link => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="border px-2 py-1">${link.code}</td>
+            <td class="border px-2 py-1 truncate max-w-xs">
+              <a href="${link.url}" target="_blank" class="text-blue-600 hover:underline">${link.url}</a>
+            </td>
+            <td class="border px-2 py-1">${link.clicks}</td>
+            <td class="border px-2 py-1">${link.last_clicked || '-'}</td>
+            <td class="border px-2 py-1 flex gap-1">
+              <button onclick="deleteLink('${link.code}')" class="bg-red-500 text-white px-2 rounded hover:bg-red-600 transition">Delete</button>
+              <a href="/code/${link.code}" class="bg-green-500 text-white px-2 rounded hover:bg-green-600 transition">Stats</a>
+            </td>
+          `;
+          table.appendChild(tr);
+        });
+      } catch (err) {
+        table.innerHTML = `<tr><td colspan="5" class="text-center text-red-500 py-2">${err.message}</td></tr>`;
+      }
+    }
+
+    // Add link form submission
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = document.getElementById('url').value;
+      const code = document.getElementById('code').value;
+      
+      if (!isValidURL(url)) { alert('Invalid URL'); return; }
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+
+      try {
+        const res = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, code })
+        });
+
+        if (res.status === 201) {
+          form.reset();
+          loadLinks();
+          alert('Link added successfully!');
+        } else {
+          const err = await res.json();
+          alert('Error: ' + err.error);
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    // Delete link
+    async function deleteLink(code) {
+      if (!confirm('Delete this link?')) return;
+      const res = await fetch(`${API}/${code}`, { method: 'DELETE' });
+      if (res.ok) loadLinks();
+      else alert('Error deleting link');
+    }
+
+    loadLinks();
+  </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TinyLink Stats</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-2xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold mb-4">Link Stats</h1>
+    <div id="stats" class="space-y-2">
+      <p class="text-gray-500">Loading...</p>
+    </div>
+    <a href="/" class="mt-4 inline-block text-blue-500">← Back to Dashboard</a>
+  </div>
+
+  <script>
+    const API = '/api/links';
+    const statsDiv = document.getElementById('stats');
+    const code = window.location.pathname.split('/code/')[1];
+
+    async function loadStats() {
+      statsDiv.innerHTML = '<p class="text-gray-500">Loading...</p>';
+      try {
+        const res = await fetch(`${API}/${code}`);
+        if (!res.ok) {
+          statsDiv.innerHTML = '<p class="text-red-500">Link not found</p>';
+          return;
+        }
+        const link = await res.json();
+
+        statsDiv.innerHTML = `
+          <p><strong>Code:</strong> ${link.code}</p>
+          <p><strong>URL:</strong> <a href="${link.url}" target="_blank" class="text-blue-600 hover:underline">${link.url}</a></p>
+          <p><strong>Total Clicks:</strong> ${link.clicks}</p>
+          <p><strong>Last Clicked:</strong> ${link.last_clicked || '-'}</p>
+          <p><strong>Short Link:</strong> 
+            <a href="/${link.code}" target="_blank" class="text-blue-600 hover:underline">${window.location.origin}/${link.code}</a>
+          </p>
+          <button id="copyBtn" class="bg-blue-500 text-white px-2 py-1 rounded mt-2 hover:bg-blue-600 transition">Copy Short Link</button>
+        `;
+
+        // Copy to clipboard functionality
+        document.getElementById('copyBtn').addEventListener('click', () => {
+          navigator.clipboard.writeText(`${window.location.origin}/${link.code}`);
+          alert('Short link copied to clipboard!');
+        });
+      } catch (err) {
+        statsDiv.innerHTML = `<p class="text-red-500">${err.message}</p>`;
+      }
+    }
+
+    loadStats();
+  </script>
+</body>
+</html>
